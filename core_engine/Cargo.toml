@@ -1,0 +1,32 @@
+[package]
+name = "sentinel-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Eren C. Akpinar"]
+description = "High-performance market data ingestion and signal processing engine"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ta = "0.5"                          # Technical analysis indicators
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+futures-util = "0.3"
+url = "2"
+anyhow = "1"
+thiserror = "1"
+
+# IPC with Python layer
+zmq = "0.10"                        # ZeroMQ for Rust→Python communication
+
+# Performance
+dashmap = "5"                       # Concurrent hashmap
+parking_lot = "0.12"                # Faster mutexes
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

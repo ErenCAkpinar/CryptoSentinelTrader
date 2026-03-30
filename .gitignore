@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# Rust
+core_engine/target/
+
+# Config (contains API keys)
+config/config.toml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs & Data
+*.log
+logs/
+data/
+*.csv
+*.db
+*.sqlite
+
+# Secrets
+.env
+*.key
+*.pem

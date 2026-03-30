@@ -1,0 +1,31 @@
+# CryptoSentinelTrader Python Dependencies
+
+# Core
+ccxt>=4.0.0                  # Exchange API (Binance, Bybit, Hyperliquid)
+pyzmq>=25.0                  # ZMQ for Rust↔Python IPC
+tomli>=2.0                   # TOML config parser (Python <3.11 compat)
+
+# AI / LLM
+google-generativeai>=0.5.0   # Gemini API
+anthropic>=0.25.0            # Claude API (fallback)
+
+# Data & Analysis
+numpy>=1.24
+pandas>=2.0
+ta-lib>=0.4.28               # Technical analysis (optional, needs C lib)
+
+# Async
+aiohttp>=3.9
+websockets>=12.0
+
+# Monitoring & Logging
+rich>=13.0                   # Pretty console output
+python-json-logger>=2.0
+
+# Testing
+pytest>=8.0
+pytest-asyncio>=0.23
+
+# Dev tools
+black>=24.0
+ruff>=0.3.0
