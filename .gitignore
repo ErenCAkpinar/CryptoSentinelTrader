@@ -6,9 +6,14 @@ __pycache__/
 venv/
 dist/
 build/
+.pytest_cache/
+htmlcov/
+.coverage
 
 # Rust
 core_engine/target/
+rust/*/target/
+target/
 
 # Config (contains API keys)
 config/config.toml
@@ -17,6 +22,7 @@ config/config.toml
 .vscode/
 .idea/
 *.swp
+*.swo
 
 # OS
 .DS_Store
@@ -34,3 +40,7 @@ data/
 .env
 *.key
 *.pem
+
+# Runtime state
+*.lock
+/tmp/
