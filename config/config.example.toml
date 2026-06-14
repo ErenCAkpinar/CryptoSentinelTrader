@@ -1,33 +1,42 @@
 # CryptoSentinelTrader Configuration
-# Copy this file to config.toml and fill in your API keys
+# Copy to config.toml. API keys should go in .env (see .env.example).
 
 [exchange]
 primary = "binance_futures_testnet"
-api_key = "YOUR_TESTNET_API_KEY"
-api_secret = "YOUR_TESTNET_API_SECRET"
-symbols = ["BTCUSDT", "ETHUSDT"]
+symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"]
 
 [risk]
-default_risk_per_trade = 0.03        # 3% per trade (medium confidence)
+default_risk_per_trade = 0.02        # 2% per trade (medium confidence)
 low_confidence_risk = 0.01           # 1% when confidence < 0.4
-high_confidence_risk = 0.05          # 5-7% when confidence > 0.7
-max_leverage = 8
+high_confidence_risk = 0.05          # 5% when confidence > 0.7
+max_leverage = 5
 max_open_positions = 3
-daily_loss_limit_pct = 0.10          # Stop trading after 10% daily loss
+daily_loss_limit_pct = 0.05          # Stop trading after 5% daily loss
+cooldown_after_close_sec = 900       # 15min anti-whipsaw cooldown
 
 [ai_engine]
-primary_llm = "gemini-2.5-flash"
-fallback_llm = "claude-sonnet"
-gemini_api_key = "YOUR_GEMINI_API_KEY"   # https://aistudio.google.com/app/apikey
-llm_call_interval_sec = 60
-anomaly_trigger_llm = true
-max_daily_llm_cost_usd = 5.0
+# Models (via serverless API — keys in .env)
+primary_llm = "kimi-k2.5"           # DeepInfra — 1T params, routine analysis
+fallback_llm = "deepseek-v4-flash"  # DeepInfra — 284B params, fast backup
+reasoning_llm = "deepseek-r1"       # OpenRouter free tier — critical decisions
+
+# Endpoints
+deepinfra_base_url = "https://api.deepinfra.com/v1/openai"
+openrouter_base_url = "https://openrouter.ai/api/v1"
+
+# Call control
+llm_call_interval_sec = 120          # Routine check every 2min
+anomaly_trigger_llm = true           # Immediate LLM on anomaly
+max_daily_llm_cost_usd = 1.50       # $1.50/day cap → ~$45/month max
+
+# Weights
 math_weight = 0.6                    # 60% weight to pure math engine
 llm_weight = 0.4                     # 40% weight to LLM analysis
+min_confidence_to_trade = 0.4        # Below this → HOLD
 
 [signals]
 snapshot_interval_sec = 10
-indicators = ["rsi_14", "macd", "bb_20", "ema_9", "ema_21", "ema_50", "atr_14", "vwap"]
+indicators = ["rsi_14", "macd", "bb_20", "ema_9", "ema_21", "ema_50", "atr_14", "vwap", "adx"]
 volume_spike_threshold = 2.0
 anomaly_score_threshold = 0.7
 
@@ -49,3 +58,6 @@ ohlcv_limit = 100                    # Number of candles to fetch per symbol
 top_candidates_for_scoring = 30      # After volume filter, score top N by volume
 always_include = ["BTCUSDT", "ETHUSDT"]  # Always keep these in the active list
 excluded_symbols = ["USDCUSDT", "BUSDUSDT", "TUSDUSDT", "DAIUSDT", "FDUSDUSDT"]
+
+[dashboard]
+daily_summary_hours = [7, 23]        # Send Telegram summary at 07:00 and 23:00
