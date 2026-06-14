@@ -192,25 +192,31 @@ impl TickBuffer {
     }
 
     fn latest_price(&self) -> f64 {
-        self.ticks.back().map(|t| t.price).unwrap_or(0.0)
+        self.ticks.back().map(|t| t.price).unwrap_or(self.close_prices.back().copied().unwrap_or(0.0))
     }
 
     fn recent_volume(&self, window_ms: u64) -> f64 {
-        let now = self.ticks.back().map(|t| t.timestamp_ms).unwrap_or(0);
+        let last_tick_time = self.ticks.back().map(|t| t.timestamp_ms).unwrap_or(0);
+        if last_tick_time == 0 {
+            // Fallback to 5m volume from warmup if no live ticks yet
+            return self.volume_history.back().copied().unwrap_or(0.0);
+        }
         self.ticks
             .iter()
             .rev()
-            .take_while(|t| now - t.timestamp_ms < window_ms)
+            .take_while(|t| last_tick_time - t.timestamp_ms < window_ms)
             .map(|t| t.volume * t.price)
             .sum()
     }
 
     fn buy_sell_ratio(&self, window_ms: u64) -> f64 {
-        let now = self.ticks.back().map(|t| t.timestamp_ms).unwrap_or(0);
+        let last_tick_time = self.ticks.back().map(|t| t.timestamp_ms).unwrap_or(0);
+        if last_tick_time == 0 { return 0.5; }
+        
         let recent: Vec<&PriceTick> = self.ticks
             .iter()
             .rev()
-            .take_while(|t| now - t.timestamp_ms < window_ms)
+            .take_while(|t| last_tick_time - t.timestamp_ms < window_ms)
             .collect();
 
         let buy_vol: f64 = recent.iter()
@@ -280,7 +286,7 @@ fn build_snapshot(
     config: &CoreConfig,
     snapshot_counter: u64,
 ) -> Option<MarketSnapshot> {
-    if buffer.ticks.is_empty() {
+    if buffer.ticks.is_empty() && buffer.close_prices.is_empty() {
         return None;
     }
 
@@ -483,7 +489,7 @@ pub async fn run_processor(
     // Create a buffer per symbol and warm up each from REST klines
     for symbol in &config.exchange.symbols {
         let mut buf = TickBuffer::new();
-        match crate::feeds::binance::fetch_historical_klines(symbol, "1m", 500).await {
+        match crate::feeds::binance::fetch_historical_klines(config, symbol, "1m", 500).await {
             Ok(klines) => {
                 info!("[{}] Warming up buffers with {} klines", symbol, klines.len());
                 buf.warmup(&klines);
@@ -547,11 +553,11 @@ pub async fn run_processor(
             _ = funding_interval.tick() => {
                 for symbol in &symbols_for_funding {
                     if let Some(buf) = buffers.get_mut(symbol) {
-                        match crate::feeds::binance::fetch_funding_rate(symbol).await {
+                        match crate::feeds::binance::fetch_funding_rate(config, symbol).await {
                             Ok(rate) => buf.funding_rate = rate,
                             Err(e) => warn!("[{}] Funding rate fetch failed: {}", symbol, e),
                         }
-                        match crate::feeds::binance::fetch_open_interest(symbol).await {
+                        match crate::feeds::binance::fetch_open_interest(config, symbol).await {
                             Ok((oi, oi_usdt)) => {
                                 buf.open_interest = oi;
                                 buf.open_interest_usdt = oi_usdt;

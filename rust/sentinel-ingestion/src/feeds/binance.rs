@@ -67,16 +67,26 @@ struct BinanceTrade {
 /// Fetch the most recent `limit` 1-minute klines for `symbol` from the
 /// Binance Futures REST API (public endpoint, no auth required).
 /// Used to warm up indicator buffers on startup.
+fn get_base_url(config: &CoreConfig) -> &str {
+    if config.exchange.primary.contains("testnet") {
+        "https://testnet.binancefuture.com"
+    } else {
+        "https://fapi.binance.com"
+    }
+}
+
 pub async fn fetch_historical_klines(
+    config: &CoreConfig,
     symbol: &str,
     interval: &str,
     limit: u32,
 ) -> Result<Vec<KlineClose>> {
+    let base_url = get_base_url(config);
     let url = format!(
-        "https://fapi.binance.com/fapi/v1/klines?symbol={}&interval={}&limit={}",
-        symbol, interval, limit
+        "{}/fapi/v1/klines?symbol={}&interval={}&limit={}",
+        base_url, symbol, interval, limit
     );
-    info!("Fetching {} historical {} klines for {}…", limit, interval, symbol);
+    info!("Fetching {} historical {} klines for {} from {}…", limit, interval, symbol, base_url);
 
     let rows: Vec<Vec<serde_json::Value>> =
         reqwest::get(&url).await?.json().await?;
@@ -121,10 +131,11 @@ pub struct FundingRateData {
 }
 
 /// Fetch current funding rate for a single symbol from Binance Futures.
-pub async fn fetch_funding_rate(symbol: &str) -> Result<f64> {
+pub async fn fetch_funding_rate(config: &CoreConfig, symbol: &str) -> Result<f64> {
+    let base_url = get_base_url(config);
     let url = format!(
-        "https://fapi.binance.com/fapi/v1/premiumIndex?symbol={}",
-        symbol
+        "{}/fapi/v1/premiumIndex?symbol={}",
+        base_url, symbol
     );
     let data: FundingRateData = reqwest::get(&url).await?.json().await?;
     Ok(data.last_funding_rate.parse().unwrap_or(0.0))
@@ -141,19 +152,20 @@ pub struct OpenInterestData {
 }
 
 /// Fetch current open interest for a single symbol from Binance Futures.
-pub async fn fetch_open_interest(symbol: &str) -> Result<(f64, f64)> {
+pub async fn fetch_open_interest(config: &CoreConfig, symbol: &str) -> Result<(f64, f64)> {
+    let base_url = get_base_url(config);
     // Current OI
     let url = format!(
-        "https://fapi.binance.com/fapi/v1/openInterest?symbol={}",
-        symbol
+        "{}/fapi/v1/openInterest?symbol={}",
+        base_url, symbol
     );
     let data: OpenInterestData = reqwest::get(&url).await?.json().await?;
     let oi = data.open_interest.parse::<f64>().unwrap_or(0.0);
 
     // Also fetch mark price for USDT value
     let price_url = format!(
-        "https://fapi.binance.com/fapi/v1/premiumIndex?symbol={}",
-        symbol
+        "{}/fapi/v1/premiumIndex?symbol={}",
+        base_url, symbol
     );
     let price_data: FundingRateData = reqwest::get(&price_url).await?.json().await?;
     let mark_price = price_data.mark_price.parse::<f64>().unwrap_or(0.0);
@@ -177,9 +189,16 @@ pub async fn run_kline_feed(
         .map(|s| format!("{}@kline_1m", s.to_lowercase()))
         .collect();
 
+    let base_ws = if config.exchange.primary.contains("testnet") {
+        "wss://stream.binancefuture.com"
+    } else {
+        "wss://fstream.binance.com"
+    };
+
     // Combined-stream endpoint wraps each message as {"stream":"…","data":{…}}
     let ws_url = format!(
-        "wss://fstream.binance.com/stream?streams={}",
+        "{}/stream?streams={}",
+        base_ws,
         streams.join("/")
     );
     info!("Connecting to Binance kline WS: {}", ws_url);
@@ -247,7 +266,13 @@ pub async fn run_feed(
         .collect();
     let stream_path = streams.join("/");
 
-    let ws_url = format!("{}/{}", config.exchange.ws_url, stream_path);
+    let base_ws = if config.exchange.primary.contains("testnet") {
+        "wss://stream.binancefuture.com/ws"
+    } else {
+        "wss://fstream.binance.com/ws"
+    };
+
+    let ws_url = format!("{}/{}", base_ws, stream_path);
     info!("Connecting to Binance WS: {}", ws_url);
 
     loop {

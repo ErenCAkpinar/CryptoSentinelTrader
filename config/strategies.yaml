@@ -1,0 +1,29 @@
+# Strategy Configuration — Sentinel Architecture
+
+# Math Engine Parameters
+math_weight: 0.6               # 60% Math scoring weight
+indicators:
+  rsi_period: 14
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  ema_ribbon: [8, 13, 21, 34] # EMA Cascade
+
+# AI Ensemble Weights
+ensemble_weight: 0.4           # 40% LLM ensemble scoring weight
+llm_weights:
+  claude: 0.40                 # Sonnet (Primary Reasoning)
+  gemini_flash: 0.35           # Gemini 2.0 Flash (Fast/Technical)
+  gemini_thinking: 0.25        # Gemini 2.0 Thinking (Deep/Contextual)
+
+# Adaptive Thresholds
+thresholds:
+  entry_confidence: 0.7        # Min combined confidence to ENTER
+  exit_confidence: 0.3         # Max combined confidence before EXIT
+  reversal_strength: 0.6       # Minimum signal strength for reversal
+  hurst_trending: 0.55         # Hurst > 0.55 = Trending
+  hurst_mean_revert: 0.45      # Hurst < 0.45 = Mean Reverting
+
+# Whale Convergence Alert (Planned)
+whale_threshold: 3             # 3+ whales in same direction = ALERT
+convergence_bonus_conf: 0.15   # Bonus to confidence on convergence

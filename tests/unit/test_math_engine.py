@@ -120,7 +120,7 @@ class TestMathEngine:
         result = self.engine.analyze(snapshot)
         required = [
             "technical_score", "trend_score", "momentum_score",
-            "volume_score", "volatility_score", "composite_score",
+            "volume_score", "bb_score", "composite_score",
             "kelly_fraction", "optimal_position_size_usd", "signal",
         ]
         for field in required:

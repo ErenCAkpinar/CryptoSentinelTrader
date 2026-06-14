@@ -1,5 +1,5 @@
 [package]
-name = "sentinel-core"
+name = "sentinel-ingestion"
 version = "0.1.0"
 edition = "2021"
 authors = ["Eren C. Akpinar"]
@@ -15,6 +15,7 @@ ta = "0.5"                          # Technical analysis indicators
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
 futures-util = "0.3"
 url = "2"
 anyhow = "1"

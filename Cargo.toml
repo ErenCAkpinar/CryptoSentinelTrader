@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "rust/sentinel-ingestion",
+    "rust/sentinel-executor",
+]
+resolver = "2"

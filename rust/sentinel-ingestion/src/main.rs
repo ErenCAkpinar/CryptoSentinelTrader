@@ -139,26 +139,26 @@ pub struct SignalConfig {
 
 /// Load CoreConfig from config.toml file, falling back to defaults.
 fn load_config() -> CoreConfig {
-    let config_path = std::path::Path::new("../config/config.toml");
+    let config_path = std::path::Path::new("../../config/config.toml");
     if config_path.exists() {
         match std::fs::read_to_string(config_path) {
             Ok(contents) => {
                 match toml::from_str::<CoreConfig>(&contents) {
                     Ok(config) => {
-                        info!("Config loaded from {}", config_path.display());
+                        println!("🛡️ [RustCore] Config loaded from {}", config_path.display());
                         return config;
                     }
                     Err(e) => {
-                        warn!("Failed to parse config.toml: {} — using defaults", e);
+                        println!("⚠️  [RustCore] Failed to parse config.toml: {} — using defaults", e);
                     }
                 }
             }
             Err(e) => {
-                warn!("Failed to read config.toml: {} — using defaults", e);
+                println!("⚠️  [RustCore] Failed to read config.toml: {} — using defaults", e);
             }
         }
     } else {
-        info!("No config.toml found, using defaults");
+        println!("⚠️  [RustCore] No config.toml found at {:?}, using defaults", config_path);
     }
 
     CoreConfig {
@@ -175,14 +175,24 @@ fn load_config() -> CoreConfig {
     }
 }
 
+use std::io::{Write, stdout};
+
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize logging
+    println!("🛡️ [RustCore] Starting Engine...");
+    stdout().flush()?;
+    
+    let config = load_config();
+    println!("🛡️ [RustCore] Config loaded. Exchange: {}, Symbols: {:?}", config.exchange.primary, config.exchange.symbols);
+    stdout().flush()?;
+
+    // Initialize tracing
     tracing_subscriber::fmt()
         .with_env_filter("sentinel_core=info")
         .init();
 
     info!("🛡️ CryptoSentinel Core Engine starting...");
+    stdout().flush()?;
 
     // Broadcast channel: trade ticks → signal processor
     let (price_tx, _) = broadcast::channel::<feeds::PriceTick>(1024);

@@ -34,3 +34,8 @@ data/
 .env
 *.key
 *.pem
+
+config/config.tomltarget/
+.claude/
+
+target/

@@ -17,14 +17,14 @@ run-core: build-rust ## Start Rust core engine
 	./core_engine/target/release/sentinel-core
 
 run-paper: ## Start Python pipeline in paper trading mode
-	.venv/bin/python -m pipeline.main --mode paper
+	PYTHONPATH=python .venv/bin/python -m sentinel.main --mode paper
 
 run-all: ## Start both core engine and pipeline
 	@echo "Starting Rust core engine in background..."
 	./core_engine/target/release/sentinel-core &
 	@sleep 2
 	@echo "Starting Python pipeline..."
-	.venv/bin/python -m pipeline.main --mode paper
+	PYTHONPATH=python .venv/bin/python -m sentinel.main --mode paper
 
 test: ## Run all tests
 	.venv/bin/pytest tests/ -v

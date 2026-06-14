@@ -1,0 +1,13 @@
+{
+  "name": "tradingview-mcp-bridge",
+  "version": "0.1.0",
+  "description": "TradingView Desktop MCP Bridge",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7",
+    "ws": "^8.8.1"
+  }
+}

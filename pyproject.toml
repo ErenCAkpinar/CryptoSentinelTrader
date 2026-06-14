@@ -1,0 +1,31 @@
+[project]
+name = "cryptosentineltrader"
+version = "0.1.0"
+description = "Hybrid Python+Rust AI-powered crypto trading bot"
+authors = [{ name = "Eren C. Akpinar" }]
+dependencies = [
+    "anthropic",
+    "google-generativeai",
+    "openai",
+    "ccxt",
+    "websockets",
+    "aiohttp",
+    "pydantic",
+    "pyyaml",
+    "python-dotenv",
+    "rich",
+    "textual",
+    "python-telegram-bot",
+    "numpy",
+    "scipy",
+    "pandas",
+    "scikit-learn",
+    "hmmlearn",
+    "arch",
+    "statsmodels",
+    "pyzmq",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["python"]
