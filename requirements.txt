@@ -4,15 +4,15 @@
 ccxt>=4.0.0                  # Exchange API (Binance, Bybit, Hyperliquid)
 pyzmq>=25.0                  # ZMQ for Rust↔Python IPC
 tomli>=2.0                   # TOML config parser (Python <3.11 compat)
+python-dotenv>=1.0           # Load .env files for secrets
+pydantic>=2.0                # Data validation for LLM responses
 
-# AI / LLM
-google-generativeai>=0.5.0   # Gemini API
-anthropic>=0.25.0            # Claude API (fallback)
+# AI / LLM (via OpenAI-compatible serverless APIs)
+openai>=1.30                 # DeepInfra + OpenRouter use OpenAI-compatible API
 
 # Data & Analysis
 numpy>=1.24
 pandas>=2.0
-ta-lib>=0.4.28               # Technical analysis (optional, needs C lib)
 
 # Async
 aiohttp>=3.9

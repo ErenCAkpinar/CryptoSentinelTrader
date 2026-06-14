@@ -1,10 +1,5 @@
 """Tests for the MathEngine — pure mathematical signal scoring"""
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from ai_engine.decision_engine import MathEngine
 
 
