@@ -621,6 +621,10 @@ def main():
     parser.add_argument("--balance",  type=float, default=1000.0, help="Starting balance in USD")
     parser.add_argument("--risk",     type=float, default=0.03,   help="Risk per trade 0-1 (default: 0.03)")
     parser.add_argument("--leverage", type=int,   default=5,      help="Max leverage (default: 5)")
+    parser.add_argument("--json",     type=str,   default=None,
+                        help="Write a track-record BacktestResult card to this JSON path (additive export).")
+    parser.add_argument("--period-label", type=str, default=None,
+                        help="Human label for the backtest card, e.g. '90d chop'. Defaults to symbol/days.")
     args = parser.parse_args()
 
     bt = Backtester(
@@ -631,7 +635,24 @@ def main():
         risk_per_trade=args.risk,
         max_leverage=args.leverage,
     )
-    bt.run()
+    result = bt.run()
+
+    if args.json:
+        # Map the report into the track_record BacktestResult shape (see
+        # track_record/models.py). Note: report stores max_drawdown_pct as a
+        # positive magnitude; the card expects a signed (negative) value.
+        import json as _json
+        card = {
+            "period": args.period_label or f"{args.symbol} {args.days}d",
+            "profit_factor": result.get("profit_factor"),
+            "win_rate_pct": result.get("win_rate_pct"),
+            "max_dd_pct": -abs(result["max_drawdown_pct"]) if result.get("max_drawdown_pct") is not None else None,
+            "note": f"{result.get('trades', 0)} trades · {result.get('total_return_pct', 0):+.2f}% · "
+                    f"Sharpe {result.get('sharpe_ratio', 0)}",
+        }
+        with open(args.json, "w", encoding="utf-8") as fh:
+            _json.dump([card], fh, indent=2)
+        print(f"📄 Wrote backtest card → {args.json}")
 
 
 if __name__ == "__main__":

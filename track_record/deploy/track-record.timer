@@ -1,0 +1,17 @@
+# Runs track-record.service every 10 minutes (matches the bot's ~5-min bar cadence
+# closely enough; the dashboard is "near-live", not tick-by-tick).
+#
+# Install: /etc/systemd/system/track-record.timer
+#   systemctl daemon-reload
+#   systemctl enable --now track-record.timer
+
+[Unit]
+Description=Update the track record every 10 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
