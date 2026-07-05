@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BreakoutBot — Transparent Track Record</title>
+  <meta name="description" content="A risk-first crypto trading system. Verifiable testnet track record — every trade, every drawdown, every circuit-breaker. No return promises." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Loading / error states -->
+  <div id="state" class="state">Loading track record…</div>
+
+  <main id="app" hidden>
+    <header class="hdr">
+      <div class="hdr-left">
+        <h1 id="bot-name">BreakoutBot</h1>
+        <p id="strategy" class="muted"></p>
+      </div>
+      <div class="hdr-right">
+        <span id="mode-badge" class="badge badge-testnet">TESTNET</span>
+        <span id="updated" class="muted small"></span>
+      </div>
+    </header>
+
+    <!-- 1 + 2: risk-discipline headline (the moat, foregrounded) -->
+    <section class="banner" aria-label="Risk discipline">
+      <p class="banner-lead">Risk-first system — designed not to blow up.</p>
+      <div class="kpis">
+        <div class="kpi kpi-hero">
+          <span class="kpi-val" id="max-dd">—</span>
+          <span class="kpi-lbl">worst drawdown to date</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-val" id="risk-per-trade">—</span>
+          <span class="kpi-lbl">fixed risk / trade</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-val" id="hard-stop">—</span>
+          <span class="kpi-lbl">hard-stop guard</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-val" id="throttle">—</span>
+          <span class="kpi-lbl">auto-throttle at</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-val" id="win-rate">—</span>
+          <span class="kpi-lbl">win rate</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-val" id="trade-count">—</span>
+          <span class="kpi-lbl">closed trades</span>
+        </div>
+      </div>
+      <p class="banner-note muted small" id="rr-note"></p>
+    </section>
+
+    <!-- 3: circuit-breaker timeline — proof the guards trip -->
+    <section class="card">
+      <h2>Risk circuit-breakers <span class="muted small">— proof the guardrails actually fire</span></h2>
+      <ul id="risk-events" class="timeline"></ul>
+    </section>
+
+    <!-- 4: equity curve -->
+    <section class="card">
+      <h2>Equity curve <span class="muted small" id="equity-sub"></span></h2>
+      <canvas id="equity-chart" height="280" aria-label="Equity curve over time"></canvas>
+    </section>
+
+    <!-- 5: trade-by-trade audit -->
+    <section class="card">
+      <h2>Every trade <span class="muted small">— full audit, including the losers</span></h2>
+      <div class="table-wrap">
+        <table id="trades">
+          <thead>
+            <tr>
+              <th>Closed</th><th>Symbol</th><th>Sleeve</th><th>Regime</th>
+              <th class="num">Risk</th><th class="num">Notional</th>
+              <th>Exit</th><th class="num">PnL</th><th class="num">Balance</th><th>Why</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 6: backtest validation -->
+    <section class="card">
+      <h2>Backtest validation <span class="muted small">— controlled drawdown even in deep bear</span></h2>
+      <div id="backtest" class="cards-row"></div>
+    </section>
+
+    <!-- 7: methodology + disclaimers -->
+    <footer class="footer">
+      <h2>Methodology &amp; honest disclaimers</h2>
+      <ul>
+        <li><strong>Testnet — not real money.</strong> Order flow is real (Binance Futures Testnet); balances are simulated. This is a transparency record, not a live audited fund.</li>
+        <li><strong>No return promises.</strong> Nothing here predicts or guarantees future profit. Past results — including the backtest — do not imply future results.</li>
+        <li><strong>Not financial advice.</strong> This is a tool/analytics record, not a recommendation to buy, sell, or hold anything.</li>
+        <li><strong>What the edge actually is:</strong> conventional technical analysis + a 4h regime filter (longs only in BULL) + mean-reversion in range + <em>fixed-dollar risk sizing</em> and hard drawdown circuit-breakers. No secret indicators, no exotic alpha claims.</li>
+        <li><strong>Verify it yourself:</strong> every number on this page is reconstructable from the bot's raw append-only log.</li>
+      </ul>
+      <p class="muted small" id="universe"></p>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

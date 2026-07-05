@@ -1,0 +1,19 @@
+{
+  "balance": 1002.10,
+  "peak": 1005.93,
+  "bar": 420,
+  "regime": {
+    "INJUSDT": "NEUTRAL",
+    "POLUSDT": "BULL",
+    "LDOUSDT": "NEUTRAL",
+    "SOLUSDT": "NEUTRAL",
+    "AVAXUSDT": "NEUTRAL",
+    "NEARUSDT": "NEUTRAL",
+    "UNIUSDT": "NEUTRAL",
+    "ADAUSDT": "NEUTRAL"
+  },
+  "mr_states": {
+    "NEARUSDT": {"state": "IDLE", "entry": 0.0, "notional": 0.0, "sl": 0.0, "tp": 0.0, "bars_in": 0, "cooldown": 0}
+  },
+  "regime_4h_ts": 1781308800000
+}

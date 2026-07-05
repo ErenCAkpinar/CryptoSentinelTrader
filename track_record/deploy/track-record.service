@@ -1,0 +1,26 @@
+# Read-only track-record update: parse the live bot's log/state → track_record.json,
+# then broadcast any new trades/risk-events to the public Telegram channel.
+#
+# Install: /etc/systemd/system/track-record.service  (paired with track-record.timer)
+# This NEVER touches the trading bot; it only reads /root/BreakoutBot/*.
+#
+# The two ExecStart lines run sequentially (Type=oneshot). If you haven't set up
+# Telegram yet, comment out the second ExecStart — the dashboard still updates.
+
+[Unit]
+Description=Track-record exporter + Telegram broadcaster (read-only)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/track-record-app
+EnvironmentFile=-/root/track-record-app/telegram.env
+ExecStart=/root/track-record-app/.venv/bin/python -m track_record.exporter \
+    --log /root/BreakoutBot/paper_bb.log \
+    --state /root/BreakoutBot/state_paper.json \
+    --config /root/BreakoutBot/config.py \
+    --out /var/www/track-record/track_record.json
+ExecStart=/root/track-record-app/.venv/bin/python -m track_record.telegram_broadcaster \
+    --data /var/www/track-record/track_record.json \
+    --cursor /root/track-record-app/.broadcast_cursor.json
