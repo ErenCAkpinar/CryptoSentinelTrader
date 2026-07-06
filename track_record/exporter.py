@@ -26,6 +26,7 @@ from pathlib import Path
 
 from .models import (
     BacktestResult,
+    Benchmark,
     EquityPoint,
     Meta,
     RiskConfig,
@@ -296,6 +297,39 @@ def _last_throttle_active(risk_events) -> bool:
     return state
 
 
+def _compute_benchmark(symbols: list[str], since: datetime) -> Benchmark | None:
+    """Equal-weight HODL of the bot's own universe + BTC/USD, since epoch.
+    Best-effort: any network/API failure returns None and must never break the
+    export (the dashboard simply omits the card)."""
+    import urllib.request
+
+    def close_at(sym: str, start_ms: int | None) -> float:
+        url = (f"https://fapi.binance.com/fapi/v1/klines?symbol={sym}"
+               f"&interval=1h&limit=1")
+        if start_ms is not None:
+            url += f"&startTime={start_ms}"
+        else:
+            now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+            url += f"&startTime={now_ms - 3_600_000}"
+        with urllib.request.urlopen(url, timeout=15) as resp:
+            return float(json.load(resp)[0][4])
+
+    try:
+        t0 = int(since.timestamp() * 1000)
+        changes = []
+        for sym in symbols:
+            p0, p1 = close_at(sym, t0), close_at(sym, None)
+            changes.append((p1 / p0 - 1.0) * 100.0)
+        btc = (close_at("BTCUSDT", None) / close_at("BTCUSDT", t0) - 1.0) * 100.0
+        return Benchmark(
+            since=since,
+            own_universe_hodl_pct=round(sum(changes) / len(changes), 2) if changes else None,
+            btc_usd_hodl_pct=round(btc, 2),
+        )
+    except Exception:
+        return None
+
+
 # Documented Faz 4c validation results (from config.py comments). Overridable via
 # --backtest-json. These are the bot's own published backtest numbers, not live.
 _DEFAULT_BACKTEST = [
@@ -307,7 +341,8 @@ _DEFAULT_BACKTEST = [
 
 
 def build_track_record(log_path: Path, state_path: Path, config_path: Path,
-                       backtest_json: Path | None) -> TrackRecord:
+                       backtest_json: Path | None,
+                       with_benchmark: bool = False) -> TrackRecord:
     risk_cfg = _read_config_constants(config_path)
     state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
 
@@ -334,6 +369,13 @@ def build_track_record(log_path: Path, state_path: Path, config_path: Path,
         last_event_at=curve[-1].ts if curve else None,
         risk_config=risk_cfg,
     )
+
+    benchmark = None
+    if with_benchmark and symbols:
+        epoch = parsed.get("epoch_start") or (curve[0].ts if curve else None)
+        if epoch is not None:
+            benchmark = _compute_benchmark(symbols, epoch)
+
     return TrackRecord(
         meta=meta,
         risk_summary=_risk_summary(trades, risk_events, peak, current_dd, max_dd),
@@ -341,6 +383,7 @@ def build_track_record(log_path: Path, state_path: Path, config_path: Path,
         trades=trades,
         risk_events=risk_events,
         backtest=backtest,
+        benchmark=benchmark,
     )
 
 
@@ -351,10 +394,14 @@ def main() -> None:
     ap.add_argument("--config", type=Path, default=Path("/root/BreakoutBot/config.py"))
     ap.add_argument("--backtest-json", type=Path, default=None,
                     help="Optional JSON from backtest_engine --json to override the default validation cards.")
+    ap.add_argument("--benchmark", action="store_true",
+                    help="Compute own-universe + BTC/USD HODL benchmark since epoch (needs network; "
+                         "failures are swallowed and the field is simply omitted).")
     ap.add_argument("--out", type=Path, default=Path("track_record.json"))
     args = ap.parse_args()
 
-    tr = build_track_record(args.log, args.state, args.config, args.backtest_json)
+    tr = build_track_record(args.log, args.state, args.config, args.backtest_json,
+                            with_benchmark=args.benchmark)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(tr.to_json(), encoding="utf-8")
 

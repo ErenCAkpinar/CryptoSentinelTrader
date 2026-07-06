@@ -51,6 +51,10 @@
           <span class="kpi-val" id="trade-count">—</span>
           <span class="kpi-lbl">closed trades</span>
         </div>
+        <div class="kpi" id="benchmark-kpi" hidden>
+          <span class="kpi-val" id="benchmark-val">—</span>
+          <span class="kpi-lbl">own-universe HODL (same period)</span>
+        </div>
       </div>
       <p class="banner-note muted small" id="rr-note"></p>
     </section>
@@ -99,6 +103,7 @@
         <li><strong>Not financial advice.</strong> This is a tool/analytics record, not a recommendation to buy, sell, or hold anything.</li>
         <li><strong>What the edge actually is:</strong> conventional technical analysis + a 4h regime filter (longs only in BULL) + mean-reversion in range + <em>fixed-dollar risk sizing</em> and hard drawdown circuit-breakers. No secret indicators, no exotic alpha claims.</li>
         <li><strong>Verify it yourself:</strong> every number on this page is reconstructable from the bot's raw append-only log.</li>
+        <li id="benchmark-method" hidden><strong>Benchmark methodology:</strong> "own-universe HODL" is an equal-weight buy&nbsp;&amp;&nbsp;hold of the bot's own coin universe in <em>USD terms</em> since the current fresh-start epoch (Binance futures 1h closes). It exists to keep comparisons honest — a benchmark in a depreciating fiat currency (e.g. a ₺-denominated chart) can make "the market" look up when in USD it is not.</li>
       </ul>
       <p class="muted small" id="universe"></p>
     </footer>

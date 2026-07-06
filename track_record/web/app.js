@@ -58,6 +58,7 @@
     renderEquity(d.equity_curve || []);
     renderTrades(d.trades || []);
     renderBacktest(d.backtest || []);
+    renderBenchmark(d.benchmark, meta);
 
     $("equity-sub").textContent = `${meta.mode.toLowerCase()} · start ${fmtUsd(meta.start_balance)} → now ${fmtUsd(meta.current_balance)}`;
     $("universe").textContent = `Universe (${(meta.symbols || []).length}): ${(meta.symbols || []).join(", ")}`;
@@ -106,6 +107,24 @@
         </tr>`;
       })
       .join("");
+  }
+
+  function renderBenchmark(b, meta) {
+    // Honest baseline: bot vs buy&hold of its OWN universe (USD). Optional field —
+    // if the exporter ran without --benchmark (or the fetch failed) we show nothing.
+    if (!b || b.own_universe_hodl_pct == null) return;
+    const el = $("benchmark-kpi");
+    el.hidden = false;
+    const uni = b.own_universe_hodl_pct;
+    $("benchmark-val").textContent = `${uni >= 0 ? "+" : ""}${uni.toFixed(2)}%`;
+    const botPct = meta.start_balance
+      ? ((meta.current_balance / meta.start_balance) - 1) * 100 : null;
+    const btcTxt = b.btc_usd_hodl_pct != null
+      ? ` BTC/USD same period: ${b.btc_usd_hodl_pct >= 0 ? "+" : ""}${b.btc_usd_hodl_pct.toFixed(2)}%.` : "";
+    $("rr-note").textContent += botPct == null ? "" :
+      ` Comparison, same period & USD terms — bot: ${botPct >= 0 ? "+" : ""}${botPct.toFixed(2)}% vs own-universe HODL: ${uni >= 0 ? "+" : ""}${uni.toFixed(2)}%.${btcTxt}`;
+    const method = document.getElementById("benchmark-method");
+    if (method) method.hidden = false;
   }
 
   function renderBacktest(items) {
