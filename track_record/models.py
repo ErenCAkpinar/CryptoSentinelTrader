@@ -93,6 +93,19 @@ class BacktestResult(BaseModel):
     note: str = ""
 
 
+class Benchmark(BaseModel):
+    """Honest comparison baseline: buy-and-hold of the bot's OWN coin universe
+    (equal-weight, USD terms) since the current epoch. Guards against currency-
+    illusion comparisons (e.g. a TRY-denominated BTC chart 'outperforming')."""
+
+    since: datetime
+    own_universe_hodl_pct: float | None = Field(
+        None, description="Equal-weight HODL return of meta.symbols since epoch, in %.")
+    btc_usd_hodl_pct: float | None = Field(
+        None, description="BTC/USD HODL return since epoch, in %.")
+    note: str = "Equal-weight buy & hold of the bot's own universe, USD terms, since fresh-start."
+
+
 class RiskSummary(BaseModel):
     peak_balance: float
     current_dd_pct: float
@@ -115,6 +128,7 @@ class TrackRecord(BaseModel):
     trades: list[Trade] = Field(default_factory=list)
     risk_events: list[RiskEvent] = Field(default_factory=list)
     backtest: list[BacktestResult] = Field(default_factory=list)
+    benchmark: Benchmark | None = None
 
     def to_json(self, **kwargs) -> str:
         """Serialize to the on-disk JSON the web page and broadcaster consume."""
