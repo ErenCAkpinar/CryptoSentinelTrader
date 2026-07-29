@@ -47,8 +47,19 @@
     $("win-rate").textContent = rs.win_rate_pct != null ? `${rs.win_rate_pct.toFixed(0)}%` : "—";
     $("trade-count").textContent = rs.total_trades ?? "—";
 
+    // Expectancy is the number that decides whether a system makes money — a win
+    // rate on its own does not. Show it, and show the win rate it must beat.
+    if (rs.expectancy_usd != null) {
+      $("expectancy-kpi").hidden = false;
+      $("expectancy-val").textContent = fmtSignedUsd(rs.expectancy_usd);
+    }
+    if (rs.breakeven_wr_pct != null) {
+      $("win-rate-lbl").textContent = `win rate (needs ${rs.breakeven_wr_pct.toFixed(0)}% to break even)`;
+    }
+
     const rr = (rs.avg_win_usd != null && rs.avg_loss_usd)
-      ? `Avg win ${fmtSignedUsd(rs.avg_win_usd)} vs avg loss ${fmtSignedUsd(rs.avg_loss_usd)}. `
+      ? `Avg win ${fmtSignedUsd(rs.avg_win_usd)} vs avg loss ${fmtSignedUsd(rs.avg_loss_usd)}`
+        + (rs.payoff_ratio != null ? ` (payoff ${rs.payoff_ratio})` : "") + ". "
       : "";
     $("rr-note").textContent =
       `${rr}Every full trade risks a fixed ~$${(cfg.risk_per_trade_usd || 0).toFixed(0)} regardless of the coin's volatility — ` +

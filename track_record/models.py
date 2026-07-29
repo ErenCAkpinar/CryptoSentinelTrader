@@ -112,10 +112,23 @@ class RiskSummary(BaseModel):
     max_dd_pct: float = Field(..., description="Worst drawdown ever reached — the headline 'doesn't blow up' number.")
     throttle_active: bool = False
     hard_stopped: bool = False
-    total_trades: int = 0
-    win_rate_pct: float | None = None
+    total_trades: int = Field(
+        0, description="Round-trip POSITIONS, not log records. A scale-out (TP1 then "
+                       "TP2/TRAIL) is one position, counted once.")
+    win_rate_pct: float | None = Field(
+        None, description="Position-based win rate. Judge it against breakeven_wr_pct — "
+                          "a win rate alone says nothing about profitability.")
     avg_win_usd: float | None = None
     avg_loss_usd: float | None = None
+    payoff_ratio: float | None = Field(
+        None, description="avg win / avg loss. Below 1.0 means wins are smaller than losses.")
+    breakeven_wr_pct: float | None = Field(
+        None, description="Win rate needed to break even at this payoff ratio.")
+    expectancy_usd: float | None = Field(
+        None, description="Expected $ per position. Negative = the system loses money "
+                          "however good the win rate looks.")
+    profit_factor: float | None = Field(
+        None, description="Gross wins / gross losses, position-based. Below 1.0 = losing.")
     dd_circuit_event_count: int = 0
 
 

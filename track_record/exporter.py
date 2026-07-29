@@ -58,7 +58,11 @@ _RE_DAILY_FREEZE = re.compile(r"Daily SL limit reached — freezing (\w+) entrie
 # Context
 _RE_REGIME = re.compile(r"🧭 Regime refresh — BULL:\s+(.*?)\s+\(others")
 _RE_NEW_DAY = re.compile(rf"📅 New day\s+([\d-]+)\s+\|\s+starting balance\s+\$?{_NUM}")
-_RE_BAR_BAL = re.compile(rf"Bar #\d+\s+.*?\|\s+\$?{_NUM}\s+\(")  # dense per-bar balance
+# Dense per-bar balance. The bar number is thousands-separated once the bot passes
+# bar 1,000 ("Bar #12,649"), so the digit class must accept commas — without it the
+# equity curve silently degrades to event-only points and last_event_at stops being
+# a liveness signal.
+_RE_BAR_BAL = re.compile(rf"Bar #[\d,]+\s+.*?\|\s+\$?{_NUM}\s+\(")
 _RE_ANY_BAL = re.compile(rf"bal=\$?{_NUM}")
 
 # Exit-type label normalization → schema ExitType
@@ -268,11 +272,43 @@ def _build_equity_curve(balance_series: list[tuple[datetime, float]]) -> tuple[l
     return _downsample(curve), peak, current_dd, max_dd
 
 
+def _fold_positions(trades) -> list[tuple[str, float]]:
+    """Fold exit legs into round-trip POSITIONS → [(final_exit_type, net_pnl)].
+
+    A momentum position that reaches TP1 closes half there and the rest later
+    (TP2 / TRAIL), so it emits TWO log records — and because the trailing stop
+    already sits above entry once TP1 is hit, both are profitable by
+    construction. Counting records therefore double-counts every winner: on the
+    live record the identity TP1 == TP2 + TRAIL held exactly (13 == 2 + 11) and
+    the reported win rate was inflated by ~14 points (57.7% vs a true 43.6%).
+
+    Reporting positions instead is what makes the published numbers honest.
+    Mirrors BreakoutBot's metrics.aggregate_positions().
+    """
+    positions: list[tuple[str, float]] = []
+    pending: dict[str, float] = {}          # symbol -> pnl banked at TP1
+    for t in sorted(trades, key=lambda x: x.ts_close):
+        et = t.exit_type
+        if t.sleeve == "MR" or et.startswith("MR_"):
+            positions.append((et, t.pnl))
+        elif et == "TP1":
+            if t.symbol in pending:          # defensive: TP1 without a close
+                positions.append(("TP1", pending.pop(t.symbol)))
+            pending[t.symbol] = t.pnl
+        else:                                # TP2 / TRAIL / SL / TIMEOUT
+            banked = pending.pop(t.symbol, 0.0)
+            positions.append((et, banked + t.pnl))
+    return positions
+
+
 def _risk_summary(trades, risk_events, peak, current_dd, max_dd) -> RiskSummary:
-    real = [t for t in trades]  # all FULL + MR closes (probes already excluded upstream)
-    wins = [t.pnl for t in real if t.pnl > 0]
-    losses = [t.pnl for t in real if t.pnl <= 0]
-    n = len(real)
+    positions = _fold_positions(trades)
+    wins = [p for _, p in positions if p > 0]
+    losses = [p for _, p in positions if p <= 0]
+    n = len(positions)
+    avg_w = sum(wins) / len(wins) if wins else 0.0
+    avg_l = abs(sum(losses) / len(losses)) if losses else 0.0
+    gross_w, gross_l = sum(wins), abs(sum(losses))
     return RiskSummary(
         peak_balance=round(peak, 2),
         current_dd_pct=round(current_dd, 4),
@@ -281,8 +317,12 @@ def _risk_summary(trades, risk_events, peak, current_dd, max_dd) -> RiskSummary:
         hard_stopped=any(e.type == "HARD_STOP" for e in risk_events),
         total_trades=n,
         win_rate_pct=round(100 * len(wins) / n, 1) if n else None,
-        avg_win_usd=round(sum(wins) / len(wins), 2) if wins else None,
-        avg_loss_usd=round(sum(losses) / len(losses), 2) if losses else None,
+        avg_win_usd=round(avg_w, 2) if wins else None,
+        avg_loss_usd=round(-avg_l, 2) if losses else None,
+        payoff_ratio=round(avg_w / avg_l, 2) if avg_l > 0 else None,
+        breakeven_wr_pct=round(100 * avg_l / (avg_w + avg_l), 1) if (avg_w + avg_l) > 0 else None,
+        expectancy_usd=round(sum(p for _, p in positions) / n, 2) if n else None,
+        profit_factor=round(gross_w / gross_l, 2) if gross_l > 0 else None,
         dd_circuit_event_count=sum(1 for e in risk_events if e.type in ("THROTTLE_ON", "HARD_STOP")),
     )
 
