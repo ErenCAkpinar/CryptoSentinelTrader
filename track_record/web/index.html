@@ -45,11 +45,15 @@
         </div>
         <div class="kpi">
           <span class="kpi-val" id="win-rate">—</span>
-          <span class="kpi-lbl">win rate</span>
+          <span class="kpi-lbl" id="win-rate-lbl">win rate (per position)</span>
         </div>
         <div class="kpi">
           <span class="kpi-val" id="trade-count">—</span>
-          <span class="kpi-lbl">closed trades</span>
+          <span class="kpi-lbl">closed positions</span>
+        </div>
+        <div class="kpi" id="expectancy-kpi" hidden>
+          <span class="kpi-val" id="expectancy-val">—</span>
+          <span class="kpi-lbl">expectancy / position</span>
         </div>
         <div class="kpi" id="benchmark-kpi" hidden>
           <span class="kpi-val" id="benchmark-val">—</span>
@@ -102,6 +106,7 @@
         <li><strong>No return promises.</strong> Nothing here predicts or guarantees future profit. Past results — including the backtest — do not imply future results.</li>
         <li><strong>Not financial advice.</strong> This is a tool/analytics record, not a recommendation to buy, sell, or hold anything.</li>
         <li><strong>What the edge actually is:</strong> conventional technical analysis + a 4h regime filter (longs only in BULL) + mean-reversion in range + <em>fixed-dollar risk sizing</em> and hard drawdown circuit-breakers. No secret indicators, no exotic alpha claims.</li>
+        <li><strong>Counted per position, not per fill.</strong> When a trade scales out (half at the first target, the rest on the trailing stop) that is <em>one</em> position here, not two wins. Counting fills would inflate the win rate by roughly 14 points — this page reports the lower, honest number, and shows the win rate the system would need just to break even.</li>
         <li><strong>Verify it yourself:</strong> every number on this page is reconstructable from the bot's raw append-only log.</li>
         <li id="benchmark-method" hidden><strong>Benchmark methodology:</strong> "own-universe HODL" is an equal-weight buy&nbsp;&amp;&nbsp;hold of the bot's own coin universe in <em>USD terms</em> since the current fresh-start epoch (Binance futures 1h closes). It exists to keep comparisons honest — a benchmark in a depreciating fiat currency (e.g. a ₺-denominated chart) can make "the market" look up when in USD it is not.</li>
       </ul>
