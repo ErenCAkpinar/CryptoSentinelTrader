@@ -96,13 +96,25 @@ GCP VM'de iki bot paralel test edildi (`journalctl -u breakoutbot` / `-u breakou
 - **Trail genişliği asıl darboğaz**, kısmi çıkış değil: E1 tek başına −%3, E2 tek başına +%16, ikisi birlikte **+%23** (süperadditif).
 - **Hacim teyidini sıkılaştırmak zararlı** (−%53). Literatürün "kırılımda 2-3× hacim" tavsiyesi bu sisteme UYMUYOR.
 
-**Canlı durum (29 Tem sonrası) — CANLI A/B TESTİ:**
-| Servis | Konfig | Başlangıç | Mod |
-|---|---|---|---|
-| `breakoutbot` (MAIN) | kontrol | $935'ten devam | testnet emirleri |
-| `breakoutbot-test` | **E6** (systemd `override.conf` env) | $1000 taze | lokal sim |
+**✅ CANLI A/B SONUCU (29 Tem → 10 Ağu, 12 gün) — E6 KAZANDI, MAIN'E PROMOTE EDİLDİ:**
 
-İkisinde de telemetri var, aynı piyasada paralel. **~12 Ağustos'ta değerlendir:** expectancy/R kıyasla (mutlak bakiye DEĞİL — farklı başlangıç). E6 canlıda da geçerse MAIN'e promote.
+| Metrik (ölçek-bağımsız) | MAIN (kontrol) | **-test (E6)** |
+|---|---|---|
+| Payoff | 1.03 | **1.76** |
+| Profit Factor | 0.90 | **1.96** |
+| WR vs başabaş | %46.7 vs %49.2 → **altında ❌** | %52.6 vs %36.2 → **üstünde ✅** |
+| Expectancy | −$0.33/poz | **+$3.07/poz** |
+| Pozisyon | 60 | 19 |
+
+- **Mekanizma kanıtlandı:** E6'da **TP2'ler geldi** (+$17.18, +$25.92); MAIN aynı dönemde TP2'ye hiç ulaşamadı (en iyisi TRAIL +$3.15). Geniş trail sağ kuyruğu açtı.
+- **Giriş davranışı değişmedi:** huni neredeyse özdeş (probe 53 vs 50, confirm %27 vs %26, full 13 vs 12) → kazanç "daha iyi giriş"ten değil, kazananı koşturmaktan.
+- **Backtest transfer oldu:** payoff öngörüsü 1.65, canlıda 1.76.
+- ⚠️ Dolar rakamları kıyaslanamaz: MAIN peak DD −8.9% olduğu için **−%7 throttle devrede** (yarım boyut) — eşleşen trade'lerde tam 2× fark bundan. Bu yüzden payoff/PF/başabaş-WR gibi ölçek-bağımsız metrikler kullanıldı.
+- ⚠️ 19 pozisyon küçük örneklem; iki TP2 kazancın büyük kısmını taşıyor. Karar, backtest'in iki penceresi + canlı sonucun **birlikte** aynı yönü göstermesine dayanıyor.
+
+**PROMOTE (10 Ağu):** MAIN'in `override.conf`'una `Environment=X_TP1_CLOSE_FRAC=0.0` + `Environment=X_TRAIL_ATR=2.5` eklendi (mevcut `Restart=on-failure` + `RestartPreventExitStatus=1` korundu). **State sıfırlanmadı** — $935'ten devam ediyor; panodaki equity eğrisinde dönüm noktası görünsün diye (şeffaflık ürünü için kaybı silmek yerine toparlanmayı göstermek daha güçlü). Throttle equity −%7'nin üstüne çıkınca kendiliğinden kalkar.
+
+**Sıradaki:** `-test` şu an MAIN ile aynı konfigi koşuyor (artık gereksiz) — bir sonraki hipotez için serbest. Açık soru hâlâ **canlı-backtest uçurumu** (kontrol konfiginde canlı −0.07R vs backtest +0.228R).
 
 **⚠️ AÇIK SORU:** Düzeltilmiş metrikle bile **backtest +0.228R iken canlı −0.076R** — 0.30R uçurum ölçüm hatasıyla açıklanmıyor. Şüpheliler: dönem farkı, backtest'te intrabar iyimserliği (TP1 SL'den önce kontrol ediliyor), `MAX_OPEN=2` ve `EQUITY_THROTTLE_DD` backtest'te modellenmiyor. Telemetri bunu ölçecek (canlı confirm oranını backtest'in %14-31'iyle kıyasla).
 
