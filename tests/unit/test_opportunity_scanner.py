@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import numpy as np
 import pytest
 
-from scanner.opportunity_scanner import OpportunityScanner
+from sentinel.strategies.scanner import OpportunityScanner
 
 
 def make_config():
