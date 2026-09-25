@@ -7,12 +7,16 @@ tomli>=2.0                   # TOML config parser (Python <3.11 compat)
 python-dotenv>=1.0           # Load .env files for secrets
 pydantic>=2.0                # Data validation for LLM responses
 
-# AI / LLM (via OpenAI-compatible serverless APIs)
+# AI / LLM
+google-genai>=1.0            # Gemini models in the decision ensemble
+anthropic>=0.40              # Claude model in the decision ensemble
 openai>=1.30                 # DeepInfra + OpenRouter use OpenAI-compatible API
 
 # Data & Analysis
 numpy>=1.24
 pandas>=2.0
+scikit-learn>=1.3            # Confidence calibration
+hmmlearn>=0.3                # HMM market-regime model
 
 # Async
 aiohttp>=3.9
@@ -21,6 +25,8 @@ websockets>=12.0
 # Monitoring & Logging
 rich>=13.0                   # Pretty console output
 python-json-logger>=2.0
+textual>=0.50                # Terminal dashboard
+python-telegram-bot>=21.0    # Telegram bot
 
 # Testing
 pytest>=8.0
