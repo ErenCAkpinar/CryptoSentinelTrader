@@ -1,138 +1,124 @@
 # 🛡️ CryptoSentinelTrader
 
-**AI-powered autonomous crypto futures trading system with real-time market surveillance.**
+**A Python + Rust research system for crypto futures trading experiments.**
 
-> Continuous market monitoring → Signal detection → AI decision engine → Adaptive risk execution
+A Rust engine streams live Binance futures market data and computes indicators and anomaly scores. A Python pipeline scores each market snapshot, can ask an LLM ensemble for a second opinion, and manages paper positions under hard risk limits.
+
+> **Status:** research project, paper trading only. Live trading is not enabled, and this README makes no performance claims.
 
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
-[![Rust](https://img.shields.io/badge/Rust-1.75+-orange.svg)](https://www.rust-lang.org/)
+[![Rust](https://img.shields.io/badge/Rust-stable-orange.svg)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
+## What works today
+
+Checked from a clean clone on 25 September 2026 (Python 3.11, Rust 1.95):
+
+- `cargo build` builds the Rust workspace, and `cargo test` passes all 26 Rust unit tests (indicators and anomaly detection).
+- The paper pipeline starts the Rust engine, receives live Binance futures snapshots over ZeroMQ, makes a decision for each one and opens/closes paper positions with stop-loss, take-profit and fees.
+- Without LLM API keys the ensemble falls back to a neutral vote, so decisions come from the math engine alone.
+- The Python unit tests for the math engine and the opportunity scanner pass.
+
 ## Architecture
 
+The design has seven layers. Not all of them are built yet; the table shows where each one stands.
+
+| Layer | Responsibility | Code | Status |
+|---|---|---|---|
+| 0 · MCP bridges | TradingView and whale-data connectors for AI tools | `mcp/` | Experimental (placeholder data) |
+| 1 · Ingestion | Binance futures WebSocket streams, REST warm-up of recent candles | `rust/sentinel-ingestion/src/feeds` | Implemented |
+| 2 · Signal processing | RSI, EMA, MACD, Bollinger Bands, ATR, ADX, VWAP; price/volume/order-flow anomaly scores; snapshot publishing over ZeroMQ | `rust/sentinel-ingestion/src/{indicators,anomaly,signals}` | Implemented, unit-tested |
+| 3 · Decision engine | Math scoring engine + optional LLM ensemble (Gemini 2.5 Flash/Pro and Claude, weighted consensus); HMM regime model and confidence calibration | `python/sentinel/ai_engine` | Math engine implemented and tested; LLM ensemble implemented (needs API keys); regime and calibration experimental |
+| 4 · Risk & execution | Paper executor (sizing, leverage cap, SL/TP, fees), kill switch, circuit breaker, ccxt exchange client | `python/sentinel/risk` | Implemented for paper mode; the Rust executor is a placeholder |
+| 5 · Wallet intelligence | Polymarket whale discovery, scoring and clustering | `python/sentinel/wallet_intel` | Experimental (partly mocked) |
+| 6 · Monitoring | Textual terminal dashboard and Telegram bot | `python/sentinel/dashboard` | Standalone prototypes; not yet reading the executor's position file |
+
+Other modules:
+
+- `python/sentinel/strategies/scanner.py`: opportunity scanner that chooses the active symbol list (unit-tested)
+- `python/sentinel/data/backtest_engine.py`: backtester for the math engine
+- `python/sentinel/strategies/latency_arb.py`, `spread_capture.py`: early strategy sketches
+- `track_record/`: read-only exporter and static dashboard that publish a bot's paper/testnet record (currently used for [BreakoutBot](https://breakoutbot.dev))
+
+Data flow:
+
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Layer 1: Real-Time Data Ingestion (Rust Core)          │
-│  Binance WS │ Bybit WS │ Hyperliquid WS │ News APIs    │
-└──────────────────────┬──────────────────────────────────┘
-                       │ market_snapshot.json (every 5-15s)
-┌──────────────────────▼──────────────────────────────────┐
-│  Layer 2: Signal Scanner (Rust Core)                    │
-│  Price Tracker │ Volume Engine │ Indicators │ Anomaly   │
-└──────────────────────┬──────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────┐
-│  Layer 3: AI Decision Engine (Python)                   │
-│  Pure Math Engine │ Gemini/Claude LLM │ Consensus Voter │
-└──────────────────────┬──────────────────────────────────┘
-                       │ action: HOLD / ENTER / EXIT / STOP
-┌──────────────────────▼──────────────────────────────────┐
-│  Layer 4: Execution + Adaptive Risk (Python)            │
-│  Order Executor │ Position Manager │ Stop-Loss Guard    │
-│  Confidence < 0.4 → 1% risk │ 0.4-0.7 → 3% │ > 0.7 → 5-7% │
-└──────────────────────┬──────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────┐
-│  Layer 5: Feedback Loop                                 │
-│  PnL Tracking → Strategy Adjustment → Signal Retrain   │
-└─────────────────────────────────────────────────────────┘
+Binance WebSocket ──► Rust ingestion ──► indicators + anomaly scores ──► snapshot (ZeroMQ PUB, tcp://127.0.0.1:5555)
+                                                                              │
+Python pipeline ◄─────────────────────────────────────────────────────────────┘
+   └─► circuit breaker ──► math engine (+ optional LLM ensemble) ──► paper executor ──► kill switch / risk limits
 ```
 
-## Why Two Languages?
+### Why two languages?
 
-| Component | Language | Reason |
-|-----------|----------|--------|
-| WebSocket feeds, orderbook parsing, indicator calculation | **Rust** | Sub-millisecond latency, zero-cost abstractions, memory safety for 24/7 operation |
-| AI analysis, LLM integration, strategy logic, execution | **Python** | Rich ML/AI ecosystem, exchange API libraries (ccxt), rapid prototyping |
-| Communication | **JSON over Unix socket / ZeroMQ** | Rust core produces `market_snapshot.json`, Python AI engine consumes it |
+| Part | Language | Reason |
+|---|---|---|
+| Market-data streams, indicators, anomaly detection | **Rust** | Long-running async service (tokio) with predictable memory use |
+| Decision logic, LLM calls, risk and execution | **Python** | ML/LLM libraries and exchange clients (ccxt), fast iteration |
+| Bridge | **ZeroMQ** | Rust publishes JSON snapshots; Python subscribes |
 
-## Features
+## Run locally
 
-- **24/7 Market Surveillance**: WebSocket-based continuous monitoring — never misses a signal
-- **Multi-Exchange Support**: Binance Futures, Bybit, Hyperliquid (extensible)
-- **Hybrid Decision Engine**: Pure math (Kelly criterion, technical scoring) + LLM (Gemini/Claude) with weighted consensus
-- **Adaptive Risk Management**: Dynamic position sizing based on confidence scores
-- **Cost-Optimized LLM Usage**: Math engine handles routine checks; LLM triggered only on anomalies or periodic reviews
-- **Anomaly Detection**: Volume spikes, liquidation cascades, black swan alerts
-- **Paper Trading First**: Full simulation mode before any real capital
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.11+
-- Rust 1.75+ (with cargo)
-- A Binance Futures testnet account
-
-### Installation
+You need Python 3.11+ and a stable Rust toolchain. ZeroMQ is compiled automatically by the Rust build (a C++ compiler is required, e.g. Xcode Command Line Tools on macOS).
 
 ```bash
-# Clone
 git clone https://github.com/ErenCAkpinar/CryptoSentinelTrader.git
 cd CryptoSentinelTrader
 
-# Build Rust core engine
-cd core_engine
+# Rust engine (built from the workspace root)
 cargo build --release
-cd ..
 
-# Setup Python environment
-python -m venv .venv
-source .venv/bin/activate  # macOS/Linux
+# Python environment
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
-# Configure
-cp config/config.example.toml config/config.toml
-# Edit config.toml with your API keys (testnet first!)
+# Config and runtime folder
+cp config/config.example.toml config/config.toml   # API keys are only needed for the LLM ensemble
+mkdir -p data
 
-# Run in paper trading mode
-python -m pipeline.main --mode paper
+# Paper-trading pipeline (starts the Rust engine as a subprocess)
+PYTHONPATH=python python -m sentinel.main --mode paper
 ```
 
-## Configuration
+The Makefile wraps the same steps: `make build-rust`, `make setup-python`, `make run-paper`, `make test`.
 
-```toml
-[exchange]
-primary = "binance_futures_testnet"
-api_key = "your_testnet_key"
-api_secret = "your_testnet_secret"
+## Tests
 
-[risk]
-default_risk_per_trade = 0.03        # 3%
-low_confidence_risk = 0.01           # 1% when confidence < 0.4
-high_confidence_risk = 0.05          # 5-7% when confidence > 0.7
-max_leverage = 8
-max_open_positions = 3
-daily_loss_limit_pct = 0.10          # Stop trading after 10% daily loss
-
-[ai_engine]
-primary_llm = "gemini-2.5-flash"
-fallback_llm = "claude-sonnet"
-llm_call_interval_sec = 60           # Routine LLM check every 60s
-anomaly_trigger_llm = true           # Immediate LLM call on anomaly
-max_daily_llm_cost_usd = 5.0
-
-[signals]
-snapshot_interval_sec = 10
-indicators = ["rsi_14", "macd", "bb_20", "ema_9", "ema_21", "ema_50", "atr_14", "vwap"]
-volume_spike_threshold = 2.0         # 2x average = spike
-anomaly_score_threshold = 0.7
+```bash
+cargo test --workspace   # 26 Rust unit tests
+pytest tests/ -q         # math engine and opportunity scanner
 ```
 
-## Project Status
+## Risk controls
 
-- [x] Architecture design & JSON schemas
-- [ ] Rust core engine: WebSocket feeds
-- [ ] Rust core engine: Indicator calculations
-- [ ] Rust core engine: Anomaly detection
-- [ ] Python AI engine: Math scoring
-- [ ] Python AI engine: LLM integration
-- [ ] Python execution: Binance Futures testnet
-- [ ] Paper trading pipeline
-- [ ] Dashboard (web UI)
-- [ ] Live trading (after profitable paper results)
+Enforced in paper mode by the Python executor, circuit breaker and kill switch:
+
+- Daily loss limit (5% in `config.example.toml`), at most 3 open positions, 5× leverage
+- One position per symbol and a 15-minute cooldown after a position closes
+- Risk per trade by confidence tier: 1.5% (low), 3% (medium), 5% (high), replaced by a rolling Kelly fraction once enough closed trades exist
+- Kill switch that halts the pipeline
+
+`config/risk_limits.yaml` holds the target limits for later versions; the code does not load it yet.
+
+## Known limitations
+
+- Only Binance futures data is wired in; Bybit and Hyperliquid are planned.
+- Stopping the pipeline closes paper positions, but background loops can keep the process alive. Stop it manually if it does not exit.
+- The LLM ensemble needs API keys; without them, decisions come from the math engine only.
+- The `[ai_engine]` model settings in `config.example.toml` (DeepInfra/OpenRouter) are not used yet; the ensemble currently calls Gemini and Claude directly.
+- The old LLM engine tests are skipped until they are rewritten for the current ensemble.
+
+## Roadmap
+
+- [ ] Bybit and Hyperliquid feeds
+- [ ] Order-book depth feed (currently a TODO in the signal processor)
+- [ ] Rust executor
+- [ ] Tests for the LLM ensemble
+- [ ] Clean shutdown of all background loops
+- [ ] Longer paper-trading evaluation before any live trading
 
 ## Risk Disclaimer
 
@@ -147,4 +133,4 @@ MIT License — see [LICENSE](LICENSE) for details.
 **Eren C. Akpinar** — Computer Engineering Student & Quantitative Trading Enthusiast
 
 - GitHub: [@ErenCAkpinar](https://github.com/ErenCAkpinar)
-- Other Projects: [AI_Hedge_Fund](https://github.com/ErenCAkpinar/AI_Hedge_Fund) | [QuantBoard](https://github.com/ErenCAkpinar/QuantBoard)
+- Other projects: [BreakoutBot](https://github.com/ErenCAkpinar/BreakoutBot) | [AI_Hedge_Fund](https://github.com/ErenCAkpinar/AI_Hedge_Fund)
