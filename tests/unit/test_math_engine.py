@@ -1,6 +1,6 @@
 """Tests for the MathEngine — pure mathematical signal scoring"""
 
-from ai_engine.decision_engine import MathEngine
+from sentinel.ai_engine.decision_engine import MathEngine
 
 
 def make_snapshot(
